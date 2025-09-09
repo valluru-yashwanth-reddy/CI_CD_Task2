@@ -1,0 +1,37 @@
+name: Task 2 Scans the repo for secrets and Runs only if the secrets scan passes.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  secrets_scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install git-secrets
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git-secrets
+
+      - name: Configure git-secrets
+        run: |
+          git secrets --install
+          git secrets --register-aws
+
+      - name: Scan repository for secrets
+        run: git secrets --scan || { echo "Secrets detected! Failing job."; exit 1; }
+
+  build_react_docker:
+    needs: secrets_scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build React Docker image
+        run: docker build -t react-app:latest .
